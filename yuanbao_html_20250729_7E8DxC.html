@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>2022年全国各城市学校数据可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; padding: 20px; background-color: #f5f7fa; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .container { display: flex; flex-direction: column; gap: 30px; max-width: 1400px; margin: 0 auto; }
+        .chart-container { 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px; 
+        }
+        .chart { height: 500px; }
+        .title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+        .controls { text-align: center; margin: 20px 0; }
+        button { 
+            background: #4285f4; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover { background: #3367d6; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>2022年全国城市学校数据可视化</h1>
+        <p>随机选取30个城市的普通高等学校、中等职业教育、普通中学、普通小学数据</p>
+    </div>
+    
+    <div class="controls">
+        <button id="refreshBtn">重新随机选择30个城市</button>
+    </div>
+    
+    <div class="container">
+        <div class="chart-container">
+            <div class="title">各类型学校数量对比（单位：所）</div>
+            <div id="barChart" class="chart"></div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="title">学校类型分布占比</div>
+            <div id="pieChart" class="chart"></div>
+        </div>
+    </div>
+
+    <script>
+        // 原始数据（仅保留学校相关字段和城市名称）
+        const fullData = [
+            {城市: "北京市", 高校数量: 92, 中职数量: 83, 中学数量: 667, 小学数量: 837},
+            {城市: "天津市", 高校数量: 56, 中职数量: 84, 中学数量: 535, 小学数量: 895},
+            {城市: "石家庄市", 高校数量: 43, 中职数量: 135, 中学数量: 437, 小学数量: 1474},
+            {城市: "唐山市", 高校数量: 12, 中职数量: 48, 中学数量: 346, 小学数量: 1139},
+            {城市: "秦皇岛市", 高校数量: 7, 中职数量: 32, 中学数量: 158, 小学数量: 419},
+            {城市: "邯郸市", 高校数量: 7, 中职数量: 69, 中学数量: 454, 小学数量: 1813},
+            {城市: "邢台市", 高校数量: 5, 中职数量: 60, 中学数量: 297, 小学数量: 1038},
+            {城市: "保定市", 高校数量: 15, 中职数量: 75, 中学数量: 517, 小学数量: 2139},
+            {城市: "张家口市", 高校数量: 5, 中职数量: 50, 中学数量: 165, 小学数量: 441},
+            {城市: "承德市", 高校数量: 6, 中职数量: 24, 中学数量: 136, 小学数量: 456},
+            {城市: "沧州市", 高校数量: 8, 中职数量: 40, 中学数量: 340, 小学数量: 1348},
+            {城市: "廊坊市", 高校数量: 12, 中职数量: 33, 中学数量: 216, 小学数量: 753},
+            {城市: "衡水市", 高校数量: 2, 中职数量: 36, 中学数量: 188, 小学数量: 584},
+            {城市: "太原市", 高校数量: 44, 中职数量: 46, 中学数量: 222, 小学数量: 417},
+            {城市: "大同市", 高校数量: 1, 中职数量: 33, 中学数量: 170, 小学数量: 325},
+            {城市: "阳泉市", 高校数量: 3, 中职数量: 11, 中学数量: 80, 小学数量: 197},
+            {城市: "长治市", 高校数量: 6, 中职数量: 35, 中学数量: 198, 小学数量: 483},
+            {城市: "晋城市", 高校数量: 2, 中职数量: 13, 中学数量: 135, 小学数量: 307},
+            {城市: "朔州市", 高校数量: 4, 中职数量: 20, 中学数量: 84, 小学数量: 154},
+            {城市: "晋中市", 高校数量: 17, 中职数量: 22, 中学数量: 220, 小学数量: 488},
+            {城市: "运城市", 高校数量: 7, 中职数量: 42, 中学数量: 258, 小学数量: 711},
+            {城市: "忻州市", 高校数量: 2, 中职数量: 33, 中学数量: 200, 小学数量: 395},
+            {城市: "临汾市", 高校数量: 4, 中职数量: 40, 中学数量: 234, 小学数量: 705},
+            {城市: "吕梁市", 高校数量: 1, 中职数量: 33, 中学数量: 254, 小学数量: 486},
+            {城市: "呼和浩特市", 高校数量: 24, 中职数量: 53, 中学数量: 119, 小学数量: 197},
+            {城市: "包头市", 高校数量: 5, 中职数量: 18, 中学数量: 97, 小学数量: 134},
+            {城市: "沈阳市", 高校数量: 45, 中职数量: 78, 中学数量: 313, 小学数量: 283},
+            {城市: "大连市", 高校数量: 31, 中职数量: 48, 中学数量: 309, 小学数量: 396},
+            {城市: "长春市", 高校数量: 41, 中职数量: 93, 中学数量: 412, 小学数量: 873},
+            {城市: "吉林市", 高校数量: 9, 中职数量: 33, 中学数量: 186, 小学数量: 549},
+            {城市: "哈尔滨市", 高校数量: 50, 中职数量: 52, 中学数量: 451, 小学数量: 399},
+            {城市: "上海市", 高校数量: 64, 中职数量: 87, 中学数量: 867, 小学数量: 680},
+            {城市: "南京市", 高校数量: 51, 中职数量: 42, 中学数量: 264, 小学数量: 392},
+            {城市: "无锡市", 高校数量: 13, 中职数量: 31, 中学数量: 198, 小学数量: 228},
+            {城市: "杭州市", 高校数量: 40, 中职数量: 42, 中学数量: 391, 小学数量: 493},
+            {城市: "宁波市", 高校数量: 14, 中职数量: 33, 中学数量: 322, 小学数量: 418},
+            {城市: "合肥市", 高校数量: 54, 中职数量: 50, 中学数量: 339, 小学数量: 466},
+            {城市: "福州市", 高校数量: 35, 中职数量: 40, 中学数量: 328, 小学数量: 883},
+            {城市: "南昌市", 高校数量: 49, 中职数量: 47, 中学数量: 312, 小学数量: 419},
+            {城市: "济南市", 高校数量: 46, 中职数量: 72, 中学数量: 332, 小学数量: 641},
+            {城市: "郑州市", 高校数量: 68, 中职数量: 109, 中学数量: 538, 小学数量: 981},
+            {城市: "武汉市", 高校数量: 83, 中职数量: 99, 中学数量: 399, 小学数量: 610},
+            {城市: "长沙市", 高校数量: 52, 中职数量: 87, 中学数量: 365, 小学数量: 923},
+            {城市: "广州市", 高校数量: 83, 中职数量: 78, 中学数量: 551, 小学数量: 986},
+            {城市: "南宁市", 高校数量: 35, 中职数量: 27, 中学数量: 354, 小学数量: 1086},
+            {城市: "海口市", 高校数量: 13, 中职数量: 25, 中学数量: 128, 小学数量: 142},
+            {城市: "重庆市", 高校数量: 69, 中职数量: 129, 中学数量: 1123, 小学数量: 2717},
+            {城市: "成都市", 高校数量: 65, 中职数量: 87, 中学数量: 645, 小学数量: 642},
+            {城市: "贵阳市", 高校数量: 34, 中职数量: 57, 中学数量: 345, 小学数量: 536},
+            {城市: "昆明市", 高校数量: 52, 中职数量: 77, 中学数量: 336, 小学数量: 740},
+            {城市: "拉萨市", 高校数量: 5, 中职数量: 3, 中学数量: 25, 小学数量: 74},
+            {城市: "西安市", 高校数量: 63, 中职数量: 150, 中学数量: 501, 小学数量: 1170},
+            {城市: "兰州市", 高校数量: 28, 中职数量: 41, 中学数量: 209, 小学数量: 450},
+            {城市: "西宁市", 高校数量: 10, 中职数量: 15, 中学数量: 142, 小学数量: 136},
+            {城市: "银川市", 高校数量: 16, 中职数量: 16, 中学数量: 87, 小学数量: 202},
+            {城市: "乌鲁木齐市", 高校数量: 22, 中职数量: 26, 中学数量: 159, 小学数量: 125}
+        ];
+
+        // 初始化图表
+        const barChart = echarts.init(document.getElementById('barChart'));
+        const pieChart = echarts.init(document.getElementById('pieChart'));
+        
+        // 随机选择30个城市
+        function getRandomCities() {
+            return [...fullData].sort(() => Math.random() - 0.5).slice(0, 30);
+        }
+        
+        // 更新图表函数
+        function updateCharts() {
+            const data = getRandomCities();
+            
+            // 准备柱状图数据
+            const cities = data.map(item => item.城市);
+            const universities = data.map(item => item.高校数量);
+            const midVoc = data.map(item => item.中职数量);
+            const middleSchools = data.map(item => item.中学数量);
+            const primarySchools = data.map(item => item.小学数量);
+            
+            // 准备饼图数据（各类型学校占比）
+            const totalUniversities = universities.reduce((a, b) => a + b, 0);
+            const totalMidVoc = midVoc.reduce((a, b) => a + b, 0);
+            const totalMiddleSchools = middleSchools.reduce((a, b) => a + b, 0);
+            const totalPrimarySchools = primarySchools.reduce((a, b) => a + b, 0);
+            
+            const pieData = [
+                { value: totalUniversities, name: '普通高等学校' },
+                { value: totalMidVoc, name: '中等职业教育学校' },
+                { value: totalMiddleSchools, name: '普通中学' },
+                { value: totalPrimarySchools, name: '普通小学' }
+            ];
+            
+            // 柱状图配置
+            const barOption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' }
+                },
+                legend: {
+                    data: ['普通高等学校', '中等职业教育', '普通中学', '普通小学'],
+                    bottom: 10
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    top: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: cities,
+                    axisLabel: {
+                        interval: 0,
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '学校数量（所）'
+                },
+                series: [
+                    {
+                        name: '普通高等学校',
+                        type: 'bar',
+                        data: universities,
+                        itemStyle: { color: '#5470C6' }
+                    },
+                    {
+                        name: '中等职业教育',
+                        type: 'bar',
+                        data: midVoc,
+                        itemStyle: { color: '#91CC75' }
+                    },
+                    {
+                        name: '普通中学',
+                        type: 'bar',
+                        data: middleSchools,
+                        itemStyle: { color: '#FAC858' }
+                    },
+                    {
+                        name: '普通小学',
+                        type: 'bar',
+                        data: primarySchools,
+                        itemStyle: { color: '#EE6666' }
+                    }
+                ]
+            };
+            
+            // 饼图配置
+            const pieOption = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c}所 ({d}%)'
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center'
+                },
+                series: [
+                    {
+                        name: '学校类型分布',
+                        type: 'pie',
+                        radius: ['30%', '65%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            formatter: '{b}: {d}%\n{c}所'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '15',
+                                fontWeight: 'bold'
+                            }
+                        },
+                        labelLine: {
+                            show: true
+                        },
+                        data: pieData
+                    }
+                ]
+            };
+            
+            // 设置配置项并渲染图表
+            barChart.setOption(barOption);
+            pieChart.setOption(pieOption);
+        }
+        
+        // 初始加载
+        updateCharts();
+        
+        // 按钮点击事件
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            updateCharts();
+        });
+        
+        // 响应窗口变化
+        window.addEventListener('resize', function() {
+            barChart.resize();
+            pieChart.resize();
+        });
+    </script>
+</body>
+</html>
